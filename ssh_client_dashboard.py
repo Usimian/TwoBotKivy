@@ -1,5 +1,4 @@
 from math import sin, cos
-import time
 import random
 # from ssh_client import ssh_client
 from kivy.uix.boxlayout import BoxLayout
@@ -7,7 +6,6 @@ from kivy.uix.gridlayout import GridLayout
 from kivy.uix.label import Label
 from kivy.uix.slider import Slider
 from kivy_garden.graph import Graph, MeshLinePlot
-from kivy.clock import Clock
 from kivy.app import App
 
 from ssh_client import ssh_client
@@ -25,7 +23,7 @@ class Dashboard(BoxLayout):
 
         # Slider and position label
         slider_layout = BoxLayout(orientation="horizontal", size_hint=(1, 0.2))
-        self.slider = Slider(min=-100, max=100, value=0)
+        self.slider = Slider(min=-500, max=500, value=0)
         self.position_label = Label(text="Position: 0")
         self.slider.bind(value=self.update_position)
         slider_layout.add_widget(self.slider)
@@ -93,8 +91,7 @@ class Dashboard(BoxLayout):
         self.position_label.text = f"{int(value)}"
         self.position_label.value = int(value)
         response = self.position_label.text
-        b_sent = self.client.socket.send(response.encode())      # Send position value to RP
-        # print(f"{b_sent}")
+        self.client.socket.send(response.encode())      # Send position value to RP
         # print(f"{response}")
         # time.sleep(0.2)
 
