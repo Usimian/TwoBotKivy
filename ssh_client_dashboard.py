@@ -1,10 +1,12 @@
 from math import sin, cos
 import random
+import time
 # from ssh_client import ssh_client
 from kivy.uix.boxlayout import BoxLayout
 from kivy.uix.gridlayout import GridLayout
 from kivy.uix.label import Label
 from kivy.uix.slider import Slider
+from kivy.uix.button import Button
 from kivy_garden.graph import Graph, MeshLinePlot
 from kivy.app import App
 
@@ -24,10 +26,14 @@ class Dashboard(BoxLayout):
         # Slider and position label
         slider_layout = BoxLayout(orientation="horizontal", size_hint=(1, 0.2))
         self.slider = Slider(min=-500, max=500, value=0)
-        self.position_label = Label(text="Position: 0")
         self.slider.bind(value=self.update_position)
+        self.position_label = Label(text="Position: 0")
+        self.position_label.value = 0
+        self.reset_pos = Button(text='Position Zero')
+        self.reset_pos.bind(on_press=self.on_button_press)
         slider_layout.add_widget(self.slider)
         slider_layout.add_widget(self.position_label)
+        slider_layout.add_widget(self.reset_pos)
         upper_half.add_widget(slider_layout)
 
         # Numerical dashboard items
@@ -86,14 +92,20 @@ class Dashboard(BoxLayout):
 
         self.client = ssh_client()       # Create ssh client return socket
 
+# Button pressed
+    def on_button_press(self, instance):
+        # self.position_label.value = 0
+        self.slider.value = 0
+        # print("{} Button pressed!".format(instance.text))
+
 # Slider value changed
     def update_position(self, instance, value):
         self.position_label.text = f"{int(value)}"
         self.position_label.value = int(value)
         response = self.position_label.text
         self.client.socket.send(response.encode())      # Send position value to RP
-        # print(f"{response}")
-        # time.sleep(0.2)
+        print(f"{response}")
+        time.sleep(0.2)
 
     def set_K_values(self, Kp, Ki, Kd, Kp2, Ki2, Kd2):
         self.Kp = Kp
