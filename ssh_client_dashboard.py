@@ -1,7 +1,7 @@
 from math import sin, cos
 import random
 import time
-# from ssh_client import ssh_client
+
 from kivy.uix.boxlayout import BoxLayout
 from kivy.uix.gridlayout import GridLayout
 from kivy.uix.label import Label
@@ -9,8 +9,12 @@ from kivy.uix.slider import Slider
 from kivy.uix.button import Button
 from kivy_garden.graph import Graph, MeshLinePlot
 from kivy.app import App
+from kivy.clock import Clock
+from kivy.core.window import Window
 
 from ssh_client import ssh_client
+
+Window.size = (720, 480)
 
 
 class Dashboard(BoxLayout):
@@ -18,7 +22,17 @@ class Dashboard(BoxLayout):
         super(Dashboard, self).__init__(**kwargs)
         self.orientation = "vertical"
 
-        self.set_K_values(0, 0, 0, 0, 0, 0)
+        self.Rp = 0.0
+        self.Ri = 0.0
+        self.Rd = 0.0
+        self.Kp = 0.0
+        self.Ki = 0.0
+        self.Kd = 0.0
+        self.Kp2 = 0.0
+        self.Ki2 = 0.0
+        self.Kd2 = 0.0
+
+        self.Vb = 0.0
 
         # Upper half of the screen
         upper_half = BoxLayout(orientation="vertical", size_hint=(1, 0.5))
@@ -29,16 +43,22 @@ class Dashboard(BoxLayout):
         self.slider.bind(value=self.update_position)
         self.position_label = Label(text="Position: 0")
         self.position_label.value = 0
-        self.reset_pos = Button(text='Position Zero')
+        self.battery_label = Label(text="Battery: 0")
+        self.battery_label.value = 0
+        self.reset_pos = Button(text="Position Zero")
         self.reset_pos.bind(on_press=self.on_button_press)
         slider_layout.add_widget(self.slider)
         slider_layout.add_widget(self.position_label)
         slider_layout.add_widget(self.reset_pos)
+        slider_layout.add_widget(self.battery_label)
         upper_half.add_widget(slider_layout)
 
         # Numerical dashboard items
         numbers_layout = GridLayout(cols=3, size_hint=(1, 0.8))
 
+        self.label_Rp = Label(text="Rp")
+        self.label_Ri = Label(text="Ri")
+        self.label_Rd = Label(text="Rd")
         self.label_Kp = Label(text="Kp")
         self.label_Ki = Label(text="Ki")
         self.label_Kd = Label(text="Kd")
@@ -46,6 +66,9 @@ class Dashboard(BoxLayout):
         self.label_Ki2 = Label(text="Ki2")
         self.label_Kd2 = Label(text="Kd2")
 
+        numbers_layout.add_widget(self.label_Rp)
+        numbers_layout.add_widget(self.label_Ri)
+        numbers_layout.add_widget(self.label_Rd)
         numbers_layout.add_widget(self.label_Kp)
         numbers_layout.add_widget(self.label_Ki)
         numbers_layout.add_widget(self.label_Kd)
@@ -88,51 +111,59 @@ class Dashboard(BoxLayout):
         self.add_widget(self.graph)
 
         # Start updating values
-        # Clock.schedule_interval(self.update_values, 1)
+        Clock.schedule_interval(self.update_values, 1)
 
-        self.client = ssh_client()       # Create ssh client return socket
+        self.client = ssh_client()  # Create ssh client return socket
 
-# Button pressed
-    def on_button_press(self, instance):
-        # self.position_label.value = 0
-        self.slider.value = 0
-        # print("{} Button pressed!".format(instance.text))
-
-# Slider value changed
-    def update_position(self, instance, value):
-        self.position_label.text = f"{int(value)}"
-        self.position_label.value = int(value)
+    # Set position value
+    def set_position_value(self, val):
+        self.battery_label.text = f"Battery: {self.Vb:.2f}V"
+        self.position_label.text = str(int(val))
+        self.position_label.value = val
         response = self.position_label.text
-        self.client.socket.send(response.encode())      # Send position value to RP
-        print(f"{response}")
+        self.client.socket.send(response.encode())  # Send position value to RP
+        self.slider.value = val
+
+    # Button pressed
+    def on_button_press(self, instance):
+        self.set_position_value(0)
         time.sleep(0.2)
 
-    def set_K_values(self, Kp, Ki, Kd, Kp2, Ki2, Kd2):
-        self.Kp = Kp
-        self.Ki = Ki
-        self.Kd = Kd
-        self.Kp2 = Kp2
-        self.Ki2 = Ki2
-        self.Kd2 = Kd2
+    # Slider value changed
+    def update_position(self, instance, value):
+        self.set_position_value(value)
+        time.sleep(0.2)
 
+    # Receive data from host
     def update_values(self, dt):
         # Update K values
-        self.Kp = self.client.json_data['Kp']
-        self.Ki = self.client.json_data['Ki']
-        self.Kd = self.client.json_data['Kd']
-        self.Kp2 = self.client.json_data['Kp2']
-        self.Ki2 = self.client.json_data['Ki2']
-        self.Kd2 = self.client.json_data['Kd2']
-        self.data_rcv_update = True
+        self.Rp = self.client.json_data["Rp"]
+        self.Ri = self.client.json_data["Ri"]
+        self.Rd = self.client.json_data["Rd"]
+        self.Vb = self.client.json_data["Vb"]
+        self.Kp = self.client.json_data["Kp"]
+        self.Ki = self.client.json_data["Ki"]
+        self.Kd = self.client.json_data["Kd"]
 
+        self.Kp2 = self.client.json_data["Kp2"]
+        self.Ki2 = self.client.json_data["Ki2"]
+        self.Kd2 = self.client.json_data["Kd2"]
+
+        self.label_Rp.text = f"Rp: {self.Rp:.2f}"
+        self.label_Ri.text = f"Ri: {self.Ri:.2f}"
+        self.label_Rd.text = f"Rd: {self.Rd:.2f}"
+        if self.Vb < 10.0:
+            self.battery_label.color = (1, 0, 0, 1)
+        else:
+            self.battery_label.color = (0, 1, 0, 1)
+        self.battery_label.text = f"Battery: {self.Vb:.2f}V"
         self.label_Kp.text = f"Kp: {self.Kp:.2f}"
         self.label_Ki.text = f"Ki: {self.Ki:.2f}"
         self.label_Kd.text = f"Kd: {self.Kd:.2f}"
         self.label_Kp2.text = f"Kp2: {self.Kp2:.2f}"
         self.label_Ki2.text = f"Ki2: {self.Ki2:.2f}"
         self.label_Kd2.text = f"Kd2: {self.Kd2:.2f}"
-
-        # print("Update")
+        self.set_position_value(self.position_label.value)
 
         # Update chart
         x_values = range(101)

@@ -1,11 +1,6 @@
 import json
 import threading
 import socket
-from kivy.core.window import Window
-
-# from ssh_client_dashboard import set_K_values
-
-Window.size = (720, 480)
 
 SERVER_IP = "192.168.50.50"  # Host
 PORT = 5000  # The same port as the server
@@ -15,13 +10,16 @@ class ssh_client():
     def __init__(self, **kwargs):
         self.socket = socket.socket(socket.AF_INET, socket.SOCK_STREAM)
         self.connect_to_server()
+        self.Rp = 0
+        self.Ri = 0
+        self.Rd = 0
         self.Kp = 0
         self.Ki = 0
         self.Kd = 0
         self.Kp2 = 0
         self.Ki2 = 0
         self.Kd2 = 0
-        self.json_data = {"Kp": 1, "Ki": 2, "Kd": 3, "Kp2": 4, "Ki2": 5, "Kd2": 6}
+        self.json_data = {"Rp": 1, "Ri": 2, "Rd": 3, "Kp": 4, "Ki": 5, "Kd": 6, "Kp2": 7, "Ki2": 8, "Kd2": 9}
 
     def connect_to_server(self):
         try:
@@ -39,6 +37,10 @@ class ssh_client():
                     break
                 self.json_data = json.loads(data)
                 self.data_rcv_update = True
+                self.Rp = self.json_data['Rp']
+                self.Ri = self.json_data['Ri']
+                self.Rd = self.json_data['Rd']
+                self.v_batt = self.json_data['Vb']
                 self.Kp = self.json_data['Kp']
                 self.Ki = self.json_data['Ki']
                 self.Kd = self.json_data['Kd']
