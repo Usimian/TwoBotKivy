@@ -32,23 +32,37 @@ class Dashboard(BoxLayout):
         self.Ki2 = 0.0
         self.Kd2 = 0.0
 
-        self.Vb = 0.0
+        self.Pos = 0.0  # Current position
+        self.Vb = 0.0   # Battery voltage
 
         # Upper half of the screen
-        upper_half = BoxLayout(orientation="vertical", size_hint=(1, 0.5))
+        upper_half = BoxLayout(orientation="vertical", size_hint=(1, 0.8))
 
-        # Slider and position label
+        # Slider
         slider_layout = BoxLayout(orientation="horizontal", size_hint=(1, 0.2))
         self.slider = Slider(min=-500, max=500, value=0)
         self.slider.bind(value=self.update_position)
-        self.position_label = Label(text="Position: 0")
+
+        # Position label
+        self.position_label = Label(text="Position(mm): 0")
         self.position_label.value = 0
-        self.battery_label = Label(text="Battery: 0")
+
+        # Current position label
+        self.current_pos_label = Label(text="Position(mm): 0")
+        self.current_pos_label.value = 0.0
+
+        # Battery label
+        self.battery_label = Label(text="Battery: 0.00V")
         self.battery_label.value = 0
+
+        # Zero position button
         self.reset_pos = Button(text="Position Zero")
         self.reset_pos.bind(on_press=self.on_button_press)
+
+        # Add all to layout
         slider_layout.add_widget(self.slider)
         slider_layout.add_widget(self.position_label)
+        slider_layout.add_widget(self.current_pos_label)
         slider_layout.add_widget(self.reset_pos)
         slider_layout.add_widget(self.battery_label)
         upper_half.add_widget(slider_layout)
@@ -118,9 +132,13 @@ class Dashboard(BoxLayout):
     # Set position value
     def set_position_value(self, val):
         self.battery_label.text = f"Battery: {self.Vb:.2f}V"
-        self.position_label.text = str(int(val))
+
+        self.current_pos_label.value = self.Pos
+        self.current_pos_label.text = f"Pos: {self.Pos:.2f}mm"
+
         self.position_label.value = val
-        response = self.position_label.text
+        self.position_label.text = f"Move to: {int(val)}mm"
+        response = str(int(self.position_label.value))
         self.client.socket.send(response.encode())  # Send position value to RP
         self.slider.value = val
 
@@ -132,7 +150,7 @@ class Dashboard(BoxLayout):
     # Slider value changed
     def update_position(self, instance, value):
         self.set_position_value(value)
-        time.sleep(0.2)
+        time.sleep(0.1)
 
     # Receive data from host
     def update_values(self, dt):
@@ -148,6 +166,7 @@ class Dashboard(BoxLayout):
         self.Kp2 = self.client.json_data["Kp2"]
         self.Ki2 = self.client.json_data["Ki2"]
         self.Kd2 = self.client.json_data["Kd2"]
+        self.Pos = self.client.json_data["Pos"]
 
         self.label_Rp.text = f"Rp: {self.Rp:.2f}"
         self.label_Ri.text = f"Ri: {self.Ri:.2f}"
